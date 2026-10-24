@@ -407,6 +407,105 @@ class FPSCounter:
 
 ---
 
+---
+
+## 3D Head Pose & Gaze Estimation (`detekface.pose`)
+
+### `HeadPose`
+Dataclass representing estimated 3D head orientation and attention state.
+- **`pitch`** (`float`): Vertical nod angle in degrees (negative = down, positive = up).
+- **`yaw`** (`float`): Horizontal turn angle in degrees (negative = right, positive = left).
+- **`roll`** (`float`): In-plane ear-to-shoulder tilt angle in degrees.
+- **`direction`** (`str`): Human-readable gaze direction (`'Center'`, `'Looking Left'`, `'Looking Right'`, `'Looking Up'`, `'Looking Down'`).
+- **`is_looking_at_camera`** (`bool`): `True` if head orientation angles are within attentive thresholds.
+- **`attention_state`** (`str`): `'Attentive'` or `'Looking Away'`.
+- **`as_dict()`**: Returns a rounded dictionary representation.
+
+### `HeadPoseEstimator`
+```python
+class HeadPoseEstimator:
+    def __init__(
+        self,
+        yaw_threshold: float = 15.0,
+        pitch_threshold: float = 15.0,
+        roll_threshold: float = 20.0,
+    ) -> None: ...
+    def estimate(self, landmarks, image_shape) -> HeadPose: ...
+    def project_axes(self, pose, image_shape, axis_length=50.0) -> Optional[dict]: ...
+```
+
+### `estimate_pose`
+Convenience function to compute `HeadPose` from landmarks:
+```python
+pose = detekface.estimate_pose(landmarks, image_shape=(480, 640))
+```
+
+### `draw_head_pose`
+Renders 3D projected coordinate axes (Red X, Green Y, Blue Z gaze arrow) and HUD telemetry badge onto an image.
+
+---
+
+## Face Privacy & Anonymization (`detekface.anonymize`)
+
+### `anonymize`
+```python
+def anonymize(
+    image: np.ndarray,
+    faces: Sequence[FaceDetection],
+    mode: str = "pixelate",
+    block_size: int = 16,
+    kernel_size: int = 51,
+    copy: bool = True,
+) -> np.ndarray: ...
+```
+- **`mode`**: `'pixelate'` (or `'mosaic'`), `'blur'`, or `'censor_eyes'`.
+- **`block_size`**: Pixel block size for mosaic mode (default `16`).
+- **`kernel_size`**: Gaussian blur kernel size (default `51`).
+
+### Utility Functions
+- **`pixelate_roi(image, bbox, block_size=16)`**: Pixelates a bounding box region in-place.
+- **`blur_roi(image, bbox, kernel_size=51)`**: Applies Gaussian blur to a bounding box region in-place.
+- **`censor_eyes_roi(image, landmarks, color=(0, 0, 0))`**: Draws a rotated solid black redaction bar across the eyes.
+
+---
+
+## Center Stage AI Cameraman (`detekface.autocam`)
+
+### `CenterStageTracker`
+Smoothly tracks and frames detected faces with dynamic auto-zoom and cinematic panning.
+```python
+class CenterStageTracker:
+    def __init__(
+        self,
+        smoothing: float = 0.08,
+        headroom_ratio: float = 0.45,
+        margin_scale: float = 2.4,
+        max_zoom: float = 2.8,
+        show_pip: bool = True,
+    ) -> None: ...
+    def process_frame(self, frame: np.ndarray, faces: Sequence[FaceDetection]) -> Tuple[np.ndarray, float]: ...
+    def reset(self) -> None: ...
+```
+
+---
+
+## Terminal ASCII Streamer (`detekface.ascii`)
+
+### `frame_to_ascii`
+Converts camera frames and face detection reticles into an ANSI ASCII character string.
+```python
+def frame_to_ascii(
+    frame: np.ndarray,
+    faces: Optional[Sequence[FaceDetection]] = None,
+    cols: Optional[int] = None,
+    rows: Optional[int] = None,
+    mode: str = "color", # 'color', 'matrix', or 'gray'
+    ramp: str = ASCII_RAMP_SHORT,
+) -> str: ...
+```
+
+---
+
 ## Exceptions
 
 All exceptions derive from `DetekFaceError` and include actionable `.message` and `.hint` attributes:
@@ -435,3 +534,4 @@ DetekFaceError (Base)
     ├── InvalidVideoError
     └── VideoWriteError
 ```
+

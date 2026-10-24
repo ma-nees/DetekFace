@@ -332,9 +332,129 @@ print(f"Exported annotated video to: {saved_path}")
 
 ---
 
-## 13. Configuration & Error Handling
+## 13. All-In-One Command Hub & Interactive Studio
+
+Launch any feature or the unified interactive studio with a single command:
+
+```powershell
+python run.py
+```
+*(or `python -m detekface` or `detekface`)*
+
+### 🎮 Studio Live Keyboard Hotkeys (in preview window):
+- <kbd>P</kbd> : Toggle 3D Head Pose, angles & 3D coordinate axes
+- <kbd>A</kbd> : Cycle Privacy: `OFF` ➔ `Pixelate` ➔ `Frosted Blur` ➔ `Eye Censor Bar`
+- <kbd>C</kbd> : Toggle Center Stage dynamic auto-zoom & cameraman tracking
+- <kbd>S</kbd> : Cycle HUD shapes: `HUD` ➔ `Corners` ➔ `Rounded` ➔ `Rectangle`
+- <kbd>K</kbd> : Instantly snapshot & crop clean face to disk
+- <kbd>H</kbd> : Toggle FPS & face counter telemetry badges
+- <kbd>Q</kbd> / <kbd>Esc</kbd> : Exit Studio
+
+---
+
+## 14. 3D Head Pose & Attention Estimation
+
+Estimate head orientation angles (**Pitch**, **Yaw**, **Roll**), gaze direction, and real-time screen attention state using 5 facial landmarks and OpenCV's `solvePnP`:
+
+```python
+import detekface
+
+result = detekface.detect("sample.jpg")
+for face in result.faces:
+    print(face.pose.as_dict())
+    # {'pitch': -11.4, 'yaw': 43.6, 'roll': 0.3, 'direction': 'Looking Left', 'is_looking_at_camera': False, 'attention_state': 'Looking Away'}
+
+# Render projected 3D coordinate axes and attention badges
+annotated = result.annotate(show_pose=True)
+```
+
+Run live webcam tracking:
+```powershell
+python examples/head_pose.py
+```
+
+---
+
+## 15. Face Privacy & Anonymization Engine
+
+Protect identities in photos, videos, and live webcam feeds with one line of code:
+
+```python
+import detekface
+
+result = detekface.detect("crowd.jpg")
+
+# 1. 8-bit retro mosaic pixelation
+pixelated = result.anonymize(mode="pixelate", block_size=16)
+
+# 2. Smooth frosted-glass Gaussian blur
+blurred = result.anonymize(mode="blur", kernel_size=51)
+
+# 3. Dynamic eye redaction censor bar (angled to match face tilt)
+censored = result.anonymize(mode="censor_eyes")
+```
+
+Run live webcam privacy protection:
+```powershell
+python examples/privacy_blur.py
+```
+
+---
+
+## 16. "Center Stage" AI Cameraman
+
+Automatically and cinematically pans and zooms to keep you perfectly framed in the center of the video feed as you move:
+
+```python
+from detekface.autocam import CenterStageTracker
+import cv2, detekface
+
+tracker = CenterStageTracker(smoothing=0.08, max_zoom=2.5, show_pip=True)
+cap = cv2.VideoCapture(0)
+
+while True:
+    ret, frame = cap.read()
+    result = detekface.detect(frame)
+    framed_feed, zoom = tracker.process_frame(frame, result.faces)
+    cv2.imshow("Center Stage", framed_feed)
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+```
+
+Run live:
+```powershell
+python examples/center_stage.py
+```
+
+---
+
+## 17. Terminal ASCII & Matrix Video Streamer
+
+Stream real-time camera video and face detection reticles directly inside PowerShell or bash without needing a GUI window:
+
+```python
+from detekface.ascii import frame_to_ascii
+import cv2, detekface
+
+cap = cv2.VideoCapture(0)
+while True:
+    ret, frame = cap.read()
+    result = detekface.detect(frame)
+    ascii_art = frame_to_ascii(frame, result.faces, mode="matrix") # or "color", "gray"
+    print("\033[H" + ascii_art)
+```
+
+Run live in console:
+```powershell
+python examples/terminal_face.py
+```
+
+---
+
+## 18. Configuration & Error Handling
 
 DetekFace provides structured, actionable exceptions:
+
 
 ```python
 import detekface
@@ -381,7 +501,7 @@ DetekFaceError
 
 ---
 
-## 14. Supported Python & Dependency Versions
+## 19. Supported Python & Dependency Versions
 
 | Component | Supported Versions | Tested Environment |
 | :--- | :--- | :--- |
@@ -392,7 +512,7 @@ DetekFaceError
 
 ---
 
-## 15. Model Acquisition, Caching, & Licensing
+## 20. Model Acquisition, Caching, & Licensing
 
 - **Automatic Download**: On first use, the model file is automatically downloaded from the official OpenCV Model Zoo.
 - **Model Files**:
@@ -411,7 +531,7 @@ DetekFaceError
 
 ---
 
-## 16. Troubleshooting Common Issues
+## 21. Troubleshooting Common Issues
 
 <details>
 <summary><strong>🔧 Click to expand Common Fixes & Troubleshooting Guides</strong></summary>
@@ -433,7 +553,7 @@ DetekFaceError
 
 ---
 
-## 17. Testing Instructions
+## 22. Testing Instructions
 
 Run the complete automated test suite using `pytest`:
 
@@ -464,7 +584,7 @@ Resolution   | Mean Latency | Median Latency | P95 Latency | Throughput (FPS)
 
 ---
 
-## 18. Development Setup & Contributing
+## 23. Development Setup & Contributing
 
 1. Clone the repository:
    ```powershell
@@ -489,7 +609,7 @@ Check out our **[Development Guide](docs/development.md)** for full contributing
 
 ---
 
-## 19. License Information
+## 24. License Information
 
 ### Software License
 DetekFace is released under the **MIT License**. See [LICENSE](LICENSE) for details.
@@ -502,7 +622,8 @@ The YuNet face detection model was created by Shiqi Yu and is distributed under 
 
 ---
 
-## 20. Current Limitations & Future Improvements
+## 25. Current Limitations & Future Improvements
+
 
 ### Current Limitations
 1. **No Identity Tracking**: DetekFace detects face locations on each frame independently; it does not track unique individuals across disparate frames.
