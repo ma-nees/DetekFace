@@ -48,9 +48,12 @@ pip install detekface
 
 ---
 
-## 2. Implemented Features
-
 - 📹 **2-Line Live Webcam**: Start a real-time face detection camera stream with `detekface.camera()`.
+- 🕹️ **Unified Command Hub**: Launch all features, live previews, or the All-In-One Studio with a single command: `python run.py` or `python -m detekface`.
+- 📐 **3D Head Pose & Gaze**: Compute 3D rotation vectors, pitch/yaw/roll angles, attention status, and render projected 3D coordinate axes.
+- 🥷 **Face Privacy & Anonymization Engine**: Protect identities in real-time using 8-bit retro mosaic pixelation, frosted Gaussian blur, or eye censor bars.
+- 🎬 **"Center Stage" AI Cameraman**: Smooth auto-framing and zoom that keeps your face centered as you move around.
+- 🔤 **Terminal ASCII / Matrix Streamer**: Live 24-bit TrueColor and Matrix Phosphor Green video stream directly in the console.
 - 🖼️ **Still-Image Face Detection**: Inspect faces, bounding boxes, confidence scores, and 5 facial landmarks using `detekface.detect()`.
 - ✂️ **Pristine Face Cropping**: Extract clean, unpolluted face crops programmatically or with the <kbd>C</kbd> key. Drawn overlays never contaminate saved crops.
 - 🎨 **5 Distinct Overlay Styles**: Choose between tactical corner brackets, modern rounded boxes, classic rectangles, geometric circles, or a full sci-fi HUD.
@@ -58,6 +61,7 @@ pip install detekface
 - 🎬 **Prerecorded Video Support**: Process video files frame-by-frame and export annotated clips with preserved resolution and framerate via `detekface.video()`.
 - 🔒 **Automatic Model Management**: Official YuNet ONNX models are automatically downloaded, SHA256-verified, and cached locally.
 - 💡 **Actionable Error Messages**: Exception hierarchy with clear, friendly `.hint` attributes for disconnected webcams, missing files, or corrupted data.
+
 
 ---
 

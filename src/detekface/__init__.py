@@ -5,9 +5,31 @@ clean dataclass outputs, and robust error handling.
 """
 
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
+import cv2
 import numpy as np
 
+# Suppress verbose OpenCV C++ DNN engine graph warnings on OpenCV 5.x
+try:
+    cv2.utils.logging.setLogLevel(cv2.utils.logging.LOG_LEVEL_ERROR)
+except (AttributeError, cv2.error):
+    pass
+
+
+from detekface.anonymize import (
+    SUPPORTED_ANONYMIZE_MODES,
+    anonymize,
+    blur_roi,
+    censor_eyes_roi,
+    pixelate_roi,
+)
+from detekface.ascii import (
+    ASCII_RAMP_BLOCKS,
+    ASCII_RAMP_DETAILED,
+    ASCII_RAMP_SHORT,
+    frame_to_ascii,
+)
+from detekface.autocam import CenterStageTracker
 from detekface.camera import camera
 from detekface.capture import capture
 from detekface.detector import FaceDetector
@@ -54,6 +76,13 @@ from detekface.models import (
     resolve_model,
     verify_model_initialization,
 )
+from detekface.pose import (
+    DEFAULT_3D_MODEL_POINTS,
+    HeadPose,
+    HeadPoseEstimator,
+    draw_head_pose,
+    estimate_pose,
+)
 from detekface.types import (
     SUPPORTED_IMAGE_EXTENSIONS,
     BoundingBox,
@@ -91,34 +120,28 @@ def detect(
     Returns:
         DetectionResult containing detected faces and the original BGR image.
     """
-    global _default_detector
+    global _detector_cache
+    if "_detector_cache" not in globals():
+        _detector_cache = {}
 
-    # Reuse cached default detector for identical standard configurations
-    is_standard = (
-        model is None
-        and cache_dir is None
-        and confidence_threshold == 0.7
-        and nms_threshold == 0.3
-        and top_k == 5000
+    cache_key = (
+        str(model) if model is not None else None,
+        float(confidence_threshold),
+        float(nms_threshold),
+        int(top_k),
+        str(cache_dir) if cache_dir is not None else None,
     )
 
-    if is_standard:
-        if _default_detector is None:
-            _default_detector = FaceDetector(
-                confidence_threshold=0.7,
-                nms_threshold=0.3,
-                top_k=5000,
-            )
-        return _default_detector.detect(image)
+    if cache_key not in _detector_cache:
+        _detector_cache[cache_key] = FaceDetector(
+            model=model,
+            confidence_threshold=confidence_threshold,
+            nms_threshold=nms_threshold,
+            top_k=top_k,
+            cache_dir=cache_dir,
+        )
 
-    detector = FaceDetector(
-        model=model,
-        confidence_threshold=confidence_threshold,
-        nms_threshold=nms_threshold,
-        top_k=top_k,
-        cache_dir=cache_dir,
-    )
-    return detector.detect(image)
+    return _detector_cache[cache_key].detect(image)
 
 
 __all__: List[str] = [
@@ -146,6 +169,21 @@ __all__: List[str] = [
     "FaceDetection",
     "DetectionResult",
     "FaceCapture",
+    "anonymize",
+    "pixelate_roi",
+    "blur_roi",
+    "censor_eyes_roi",
+    "SUPPORTED_ANONYMIZE_MODES",
+    "CenterStageTracker",
+    "frame_to_ascii",
+    "ASCII_RAMP_SHORT",
+    "ASCII_RAMP_BLOCKS",
+    "ASCII_RAMP_DETAILED",
+    "HeadPose",
+    "HeadPoseEstimator",
+    "estimate_pose",
+    "draw_head_pose",
+    "DEFAULT_3D_MODEL_POINTS",
     "DetekFaceError",
     "ModelError",
     "ModelNotFoundError",

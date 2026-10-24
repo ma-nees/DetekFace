@@ -160,6 +160,40 @@ class FaceDetection:
         """Bottom-right vertical coordinate."""
         return self.bbox.y2
 
+    def estimate_pose(
+        self,
+        image_shape: Tuple[int, int] = (480, 640),
+        yaw_threshold: float = 15.0,
+        pitch_threshold: float = 15.0,
+        roll_threshold: float = 20.0,
+    ) -> Optional[object]:
+        """Estimate 3D head pose and attention state from face landmarks.
+
+        Args:
+            image_shape: (height, width) frame dimensions (defaults to standard 480x640).
+            yaw_threshold: Degrees threshold for horizontal head turn.
+            pitch_threshold: Degrees threshold for vertical head nod.
+            roll_threshold: Degrees threshold for head tilt.
+
+        Returns:
+            HeadPose instance if landmarks exist, else None.
+        """
+        if self.landmarks is None:
+            return None
+        from detekface.pose import estimate_pose
+        return estimate_pose(
+            self.landmarks,
+            image_shape=image_shape,
+            yaw_threshold=yaw_threshold,
+            pitch_threshold=pitch_threshold,
+            roll_threshold=roll_threshold,
+        )
+
+    @property
+    def pose(self) -> Optional[object]:
+        """Estimated 3D head pose and gaze orientation (assuming standard 480x640 frame)."""
+        return self.estimate_pose()
+
 
 @dataclass
 class DetectionResult:
@@ -204,12 +238,34 @@ class DetectionResult:
             return self.image
         return cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
 
+    def estimate_poses(
+        self,
+        yaw_threshold: float = 15.0,
+        pitch_threshold: float = 15.0,
+        roll_threshold: float = 20.0,
+    ) -> List[Optional[object]]:
+        """Estimate 3D head pose and gaze orientations for all detected faces."""
+        if not isinstance(self.image, np.ndarray) or self.image.size == 0:
+            h, w = 480, 640
+        else:
+            h, w = self.image.shape[:2]
+        return [
+            face.estimate_pose(
+                image_shape=(h, w),
+                yaw_threshold=yaw_threshold,
+                pitch_threshold=pitch_threshold,
+                roll_threshold=roll_threshold,
+            )
+            for face in self.faces
+        ]
+
     def annotate(
         self,
         shape: str = "rectangle",
         color: Union[str, Tuple[int, int, int]] = "#00FF88",
         thickness: int = 3,
         show_confidence: bool = False,
+        show_pose: bool = False,
     ) -> np.ndarray:
         """Render face overlay annotations on a copy of the original image.
 
@@ -218,6 +274,7 @@ class DetectionResult:
              color: RGB hex code (e.g. '#00FF88'), color name ('cyan', 'green', etc.), or RGB tuple.
              thickness: Line stroke thickness in pixels (default 3).
              show_confidence: Whether to draw confidence percentage badges near each face.
+             show_pose: Whether to render 3D head pose orientation axes and attention badge.
 
         Returns:
              A new NumPy array (BGR uint8) containing the annotated image with overlays.
@@ -230,7 +287,7 @@ class DetectionResult:
 
         from detekface.drawing import draw_faces
 
-        return draw_faces(
+        annotated_img = draw_faces(
             image=self.image,
             faces=self.faces,
             shape=shape,
@@ -240,12 +297,29 @@ class DetectionResult:
             copy=True,
         )
 
+        if show_pose:
+            from detekface.pose import draw_head_pose
+            h, w = self.image.shape[:2]
+            for face in self.faces:
+                pose = face.estimate_pose(image_shape=(h, w))
+                if pose is not None:
+                    annotated_img = draw_head_pose(
+                        annotated_img,
+                        pose,
+                        bbox=face.bbox,
+                        show_axes=True,
+                        show_badge=True,
+                    )
+
+        return annotated_img
+
     def draw(
         self,
         shape: str = "rectangle",
         color: Union[str, Tuple[int, int, int]] = "#00FF88",
         thickness: int = 3,
         show_confidence: bool = False,
+        show_pose: bool = False,
     ) -> np.ndarray:
         """Alias for `annotate()` to obtain the rendered image array."""
         return self.annotate(
@@ -253,12 +327,47 @@ class DetectionResult:
             color=color,
             thickness=thickness,
             show_confidence=show_confidence,
+            show_pose=show_pose,
         )
 
     @property
     def annotated(self) -> np.ndarray:
         """Annotated image array with default overlay styling."""
         return self.annotate()
+
+    def anonymize(
+        self,
+        mode: str = "pixelate",
+        block_size: int = 16,
+        kernel_size: int = 51,
+        copy: bool = True,
+    ) -> np.ndarray:
+        """Anonymize all detected faces using pixelation, Gaussian blur, or eye censor bars.
+
+        Args:
+            mode: 'pixelate' (or 'mosaic'), 'blur', 'censor_eyes'. Default is 'pixelate'.
+            block_size: Block size for pixelation (default 16).
+            kernel_size: Gaussian kernel size for blurring (default 51).
+            copy: Whether to return a new copy (default True).
+
+        Returns:
+            NumPy array with faces anonymized.
+        """
+        if not isinstance(self.image, np.ndarray) or self.image.size == 0:
+            raise InvalidImageError(
+                message="DetectionResult does not contain a valid image array to anonymize.",
+                hint="Verify that the detection result contains valid image data.",
+            )
+        from detekface.anonymize import anonymize
+
+        return anonymize(
+            self.image,
+            faces=self.faces,
+            mode=mode,
+            block_size=block_size,
+            kernel_size=kernel_size,
+            copy=copy,
+        )
 
     def show(
         self,

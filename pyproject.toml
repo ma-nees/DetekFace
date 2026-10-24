@@ -43,6 +43,10 @@ dev = [
     "twine>=5.0",
 ]
 
+[project.scripts]
+detekface = "detekface.cli:main"
+
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
